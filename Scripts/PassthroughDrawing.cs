@@ -27,6 +27,7 @@ public class PassthroughDrawing : MonoBehaviour
     [SerializeField] private AudioClip drawEndSound;
     
     private List<GameObject> drawnLines = new List<GameObject>();
+    private Dictionary<Color, Material> materialCache = new Dictionary<Color, Material>();
     private LineRenderer currentLine;
     private int currentPositionCount;
     private bool isDrawing = false;
@@ -142,9 +143,8 @@ public class PassthroughDrawing : MonoBehaviour
         GameObject lineObj = new GameObject("DrawnLine_" + drawnLines.Count);
         currentLine = lineObj.AddComponent<LineRenderer>();
         
-        // Configure line renderer
-        currentLine.material = new Material(drawingMaterial);
-        currentLine.material.color = brushColor;
+        // Configure line renderer with cached material to reduce allocations
+        currentLine.material = GetOrCreateMaterial(brushColor);
         currentLine.startWidth = brushSize;
         currentLine.endWidth = brushSize;
         currentLine.useWorldSpace = useWorldSpace;
@@ -169,6 +169,23 @@ public class PassthroughDrawing : MonoBehaviour
         }
         
         Debug.Log("Started drawing");
+    }
+
+    /// <summary>
+    /// Gets a cached material for the given color, or creates one if not cached.
+    /// This reduces memory allocations when drawing many lines with the same color.
+    /// </summary>
+    private Material GetOrCreateMaterial(Color color)
+    {
+        if (materialCache.TryGetValue(color, out Material cachedMaterial))
+        {
+            return cachedMaterial;
+        }
+        
+        Material newMaterial = new Material(drawingMaterial);
+        newMaterial.color = color;
+        materialCache[color] = newMaterial;
+        return newMaterial;
     }
 
     /// <summary>
@@ -340,5 +357,15 @@ public class PassthroughDrawing : MonoBehaviour
     private void OnDestroy()
     {
         ClearAllDrawings();
+        
+        // Clean up cached materials
+        foreach (var material in materialCache.Values)
+        {
+            if (material != null)
+            {
+                Destroy(material);
+            }
+        }
+        materialCache.Clear();
     }
 }

@@ -96,16 +96,25 @@ public class PlaceItemInRoom : MonoBehaviour
     }
 
     /// <summary>
+    /// Performs a raycast from the camera's gaze direction.
+    /// </summary>
+    /// <param name="hit">The raycast hit result if successful.</param>
+    /// <returns>True if a valid surface was hit, false otherwise.</returns>
+    private bool TryGetGazeRaycast(out RaycastHit hit)
+    {
+        Vector3 origin = xrCamera.transform.position;
+        Vector3 dir = xrCamera.transform.forward;
+        return Physics.Raycast(origin, dir, out hit, maxPlaceDistance, realWorldMask, QueryTriggerInteraction.Ignore);
+    }
+
+    /// <summary>
     /// Updates the placement preview position based on gaze.
     /// </summary>
     private void UpdatePlacementPreview()
     {
         if (currentPreview == null) return;
         
-        Vector3 origin = xrCamera.transform.position;
-        Vector3 dir = xrCamera.transform.forward;
-
-        if (Physics.Raycast(origin, dir, out RaycastHit hit, maxPlaceDistance, realWorldMask, QueryTriggerInteraction.Ignore))
+        if (TryGetGazeRaycast(out RaycastHit hit))
         {
             currentPreview.SetActive(true);
             currentPreview.transform.position = hit.point;
@@ -122,10 +131,7 @@ public class PlaceItemInRoom : MonoBehaviour
     /// </summary>
     private void TryPlaceAtGaze()
     {
-        Vector3 origin = xrCamera.transform.position;
-        Vector3 dir = xrCamera.transform.forward;
-
-        if (Physics.Raycast(origin, dir, out RaycastHit hit, maxPlaceDistance, realWorldMask, QueryTriggerInteraction.Ignore))
+        if (TryGetGazeRaycast(out RaycastHit hit))
         {
             PlaceItem(hit.point, Quaternion.FromToRotation(Vector3.up, hit.normal));
         }
